@@ -1,0 +1,440 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>go-api-service: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">gitlab.com/alus/go-api-service/middleware.go (100.0%)</option>
+				
+				<option value="file1">gitlab.com/alus/go-api-service/sample/main.go (0.0%)</option>
+				
+				<option value="file2">gitlab.com/alus/go-api-service/service.go (42.9%)</option>
+				
+				<option value="file3">gitlab.com/alus/go-api-service/tests.go (95.8%)</option>
+				
+				<option value="file4">gitlab.com/alus/go-api-service/utilities.go (85.7%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package ApiService
+
+import (
+        "log"
+        "net/http"
+        "os"
+        "runtime"
+        "strings"
+)
+
+func MiddlewareAccessLog(next http.Handler) http.Handler <span class="cov8" title="1">{
+        return http.HandlerFunc(
+                func(response http.ResponseWriter, request *http.Request) </span><span class="cov8" title="1">{
+                        log.Printf(
+                                "PID %d, Rotines %d - [%s] from IP: %s - URL: %s\n",
+                                os.Getpid(), runtime.NumGoroutine(),
+                                request.Method, request.RemoteAddr, request.URL,
+                        )
+                        next.ServeHTTP(response, request)
+                }</span>)
+}
+
+func MiddlewareRestrictToLocal(next http.Handler) http.Handler <span class="cov8" title="1">{
+        return http.HandlerFunc(
+                func(response http.ResponseWriter, request *http.Request) </span><span class="cov8" title="1">{
+                        ip := request.RemoteAddr[:strings.LastIndex(request.RemoteAddr, ":")]
+                        if ip != "127.0.0.1" </span><span class="cov8" title="1">{
+                                RespondWithJSONMessage(response, http.StatusForbidden, "the request endpoint is restricted")
+                        }</span> else<span class="cov8" title="1"> {
+                                next.ServeHTTP(response, request)
+                        }</span>
+                })
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "fmt"
+        "net/http"
+        "time"
+
+        ApiService "gitlab.com/alus/go-api-service"
+)
+
+func welcome(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        ApiService.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+                "Message": "Welcome to API Service sample in Golang!",
+        })
+}</span>
+
+func sleep10seconds(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        time.Sleep(10 * time.Second)
+        ApiService.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+                "Message": "Wait for 10 seconds!",
+        })
+}</span>
+
+func NotFound(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        w.WriteHeader(http.StatusNotFound)
+        fmt.Fprintf(w, "Not Found Error\n")
+}</span>
+
+func main() <span class="cov0" title="0">{
+        srv := ApiService.NewService(
+                "Sample Restful Service",
+                "1.0.0b",
+                ApiService.ServiceConfig{
+                        Port: 8080,
+                },
+        )
+
+        r := srv.Router()
+        r.HandleFunc("/welcome", welcome).Methods("GET")
+        r.HandleFunc("/sleep-10-seconds", sleep10seconds).Methods("GET")
+        r.NotFoundHandler = http.HandlerFunc(NotFound)
+
+        if err := srv.ListenAndServe(); err != nil </span><span class="cov0" title="0">{
+                fmt.Println(err.Error())
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package ApiService
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "log"
+        "net/http"
+        "os"
+        "os/signal"
+        "syscall"
+        "time"
+
+        "github.com/gorilla/mux"
+)
+
+var ErrGracefullShutdown = errors.New("service stopped gracefully")
+
+type Service struct {
+        Version         string
+        Name            string
+        Address         string
+        WriteTimeout    time.Duration
+        ReadTimeout     time.Duration
+        ShutdownTimeout time.Duration
+        router          *mux.Router
+}
+
+type ServiceConfig struct {
+        Interface       string
+        Port            int
+        ShutdownTimeout time.Duration
+        WriteTimeout    time.Duration
+        ReadTimeout     time.Duration
+}
+
+func NewService(name string, version string, cnf ServiceConfig) Service <span class="cov8" title="1">{
+
+        if cnf.ShutdownTimeout == 0 </span><span class="cov8" title="1">{
+                cnf.ShutdownTimeout = time.Duration(30) * time.Second
+        }</span>
+
+        <span class="cov8" title="1">if cnf.WriteTimeout == 0 </span><span class="cov8" title="1">{
+                cnf.WriteTimeout = time.Duration(30) * time.Second
+        }</span>
+
+        <span class="cov8" title="1">if cnf.ReadTimeout == 0 </span><span class="cov8" title="1">{
+                cnf.ReadTimeout = time.Duration(30) * time.Second
+        }</span>
+
+        <span class="cov8" title="1">if cnf.Interface == "" </span><span class="cov0" title="0">{
+                cnf.Interface = "127.0.0.1"
+        }</span>
+
+        <span class="cov8" title="1">if cnf.Port == 0 </span><span class="cov0" title="0">{
+                cnf.Port = 1332
+        }</span>
+
+        <span class="cov8" title="1">srv := Service{
+                Name:            name,
+                Version:         version,
+                Address:         fmt.Sprintf("%v:%v", cnf.Interface, cnf.Port),
+                ShutdownTimeout: cnf.ShutdownTimeout,
+                WriteTimeout:    cnf.WriteTimeout,
+                ReadTimeout:     cnf.ReadTimeout,
+                router:          mux.NewRouter(),
+        }
+
+        return srv</span>
+}
+
+func (s *Service) Router() *mux.Router <span class="cov0" title="0">{
+        return s.router
+}</span>
+
+func (s *Service) PrintWelcome() <span class="cov8" title="1">{
+        fmt.Println("------------------------------------------------------------")
+        fmt.Println(s.Name + " v" + s.Version)
+        fmt.Println("------------------------------------------------------------")
+        fmt.Printf("* Address: %v\n", s.Address)
+        fmt.Println("------------------------------------------------------------")
+}</span>
+
+func stopChannel() (chan os.Signal, func()) <span class="cov0" title="0">{
+        stopCh := make(chan os.Signal, 1)
+        signal.Notify(stopCh, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+        return stopCh, func() </span><span class="cov0" title="0">{
+                close(stopCh)
+        }</span>
+}
+
+func shutdown(ctx context.Context, server *http.Server, timeout time.Duration) error <span class="cov0" title="0">{
+        ctx, cancel := context.WithTimeout(ctx, timeout)
+        defer cancel()
+
+        if err := server.Shutdown(ctx); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span> else<span class="cov0" title="0"> {
+                return ErrGracefullShutdown
+        }</span>
+}
+
+func (s *Service) ListenAndServe() error <span class="cov0" title="0">{
+        srv := &amp;http.Server{
+                Handler:      s.router,
+                Addr:         s.Address,
+                WriteTimeout: s.WriteTimeout,
+                ReadTimeout:  s.ReadTimeout,
+        }
+
+        go func(srv *http.Server) </span><span class="cov0" title="0">{
+                if err := srv.ListenAndServe(); err != nil &amp;&amp; !errors.Is(err, http.ErrServerClosed) </span><span class="cov0" title="0">{
+                        panic(err)</span>
+                }
+        }(srv)
+        <span class="cov0" title="0">stopCh, closeCh := stopChannel()
+        defer closeCh()
+        log.Println("Shutdown Notified (Timeout 30sec):", &lt;-stopCh)
+
+        return shutdown(context.Background(), srv, s.ShutdownTimeout)</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package ApiService
+
+import (
+        "bytes"
+        "io"
+        "log"
+        "os"
+        "sync"
+)
+
+func captureOutput(f func()) string <span class="cov8" title="1">{
+        reader, writer, err := os.Pipe()
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">stdout := os.Stdout
+        stderr := os.Stderr
+        defer func() </span><span class="cov8" title="1">{
+                os.Stdout = stdout
+                os.Stderr = stderr
+                log.SetOutput(os.Stderr)
+        }</span>()
+        <span class="cov8" title="1">os.Stdout = writer
+        os.Stderr = writer
+        log.SetOutput(writer)
+        out := make(chan string)
+        wg := new(sync.WaitGroup)
+        wg.Add(1)
+        go func() </span><span class="cov8" title="1">{
+                var buf bytes.Buffer
+                wg.Done()
+                io.Copy(&amp;buf, reader)
+                out &lt;- buf.String()
+        }</span>()
+        <span class="cov8" title="1">wg.Wait()
+        f()
+        writer.Close()
+        return &lt;-out</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package ApiService
+
+import (
+        "encoding/json"
+        "io"
+        "io/ioutil"
+        "net/http"
+        "os"
+        "regexp"
+        "strings"
+)
+
+func RespondWithJSONError(w http.ResponseWriter, code int, err error) <span class="cov8" title="1">{
+        RespondWithJSON(w, code, map[string]string{"message": err.Error()})
+}</span>
+
+func RespondWithJSONMessage(w http.ResponseWriter, code int, message string) <span class="cov8" title="1">{
+        RespondWithJSON(w, code, map[string]string{"message": message})
+}</span>
+
+func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) <span class="cov8" title="1">{
+        response, _ := json.Marshal(payload)
+
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(code)
+        w.Write(response)
+}</span>
+
+func FixFileName(name string) string <span class="cov8" title="1">{
+        r := regexp.MustCompile("[^aA-zZ0-9ñÑáÁéÉíÍóÓúÚ._()]+")
+
+        return r.ReplaceAllString(name, "-")
+}</span>
+
+func SaveFileFromRequest(r *http.Request, formInputName string, dest string) error <span class="cov8" title="1">{
+        file, _, err := r.FormFile(formInputName)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer file.Close()
+
+        f, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE, 0666)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer f.Close()
+        _, _ = io.Copy(f, file)
+
+        return nil</span>
+}
+
+func SaveTmpFileFromRequest(r *http.Request, formInputName string, destFolder string) (string, error) <span class="cov8" title="1">{
+        input, handler, err := r.FormFile(formInputName)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov8" title="1">defer input.Close()
+
+        file, err := ioutil.TempFile(destFolder, "*."+FixFileName(handler.Filename))
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov8" title="1">defer file.Close()
+        _, _ = io.Copy(file, input)
+
+        return file.Name(), nil</span>
+}
+
+func ParseAuthorizationHeader(r *http.Request) string <span class="cov8" title="1">{
+        value := r.Header.Get("Authorization")
+
+        if len(value) &gt; 6 </span><span class="cov8" title="1">{
+                prefix := strings.ToLower(strings.TrimSpace(value[:7]))
+
+                if prefix == "bearer" </span><span class="cov8" title="1">{
+                        value = strings.TrimSpace(value[7:])
+                }</span> else<span class="cov0" title="0"> {
+                        value = r.Header.Get("Authorization")
+                }</span>
+        }
+        <span class="cov8" title="1">return value</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
