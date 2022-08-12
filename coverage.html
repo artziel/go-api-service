@@ -55,15 +55,15 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">gitlab.com/alus/go-api-service/middleware.go (100.0%)</option>
+				<option value="file0">github.com/artziel/go-api-service/middleware.go (100.0%)</option>
 				
-				<option value="file1">gitlab.com/alus/go-api-service/sample/main.go (0.0%)</option>
+				<option value="file1">github.com/artziel/go-api-service/sample/main.go (0.0%)</option>
 				
-				<option value="file2">gitlab.com/alus/go-api-service/service.go (42.9%)</option>
+				<option value="file2">github.com/artziel/go-api-service/service.go (42.9%)</option>
 				
-				<option value="file3">gitlab.com/alus/go-api-service/tests.go (95.8%)</option>
+				<option value="file3">github.com/artziel/go-api-service/tests.go (95.8%)</option>
 				
-				<option value="file4">gitlab.com/alus/go-api-service/utilities.go (85.7%)</option>
+				<option value="file4">github.com/artziel/go-api-service/utilities.go (63.8%)</option>
 				
 				</select>
 			</div>
@@ -119,7 +119,7 @@ import (
         "net/http"
         "time"
 
-        ApiService "gitlab.com/alus/go-api-service"
+        ApiService "github.com/artziel/go-api-service"
 )
 
 func welcome(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
@@ -329,7 +329,7 @@ func captureOutput(f func()) string <span class="cov8" title="1">{
 import (
         "encoding/json"
         "io"
-        "io/ioutil"
+        "net"
         "net/http"
         "os"
         "regexp"
@@ -382,7 +382,7 @@ func SaveTmpFileFromRequest(r *http.Request, formInputName string, destFolder st
         }</span>
         <span class="cov8" title="1">defer input.Close()
 
-        file, err := ioutil.TempFile(destFolder, "*."+FixFileName(handler.Filename))
+        file, err := os.CreateTemp(destFolder, "*."+FixFileName(handler.Filename))
         if err != nil </span><span class="cov0" title="0">{
                 return "", err
         }</span>
@@ -405,6 +405,29 @@ func ParseAuthorizationHeader(r *http.Request) string <span class="cov8" title="
                 }</span>
         }
         <span class="cov8" title="1">return value</span>
+}
+
+func GetRealIPAddr(r *http.Request) string <span class="cov0" title="0">{
+
+        remoteIP := ""
+        if parts := strings.Split(r.RemoteAddr, ":"); len(parts) == 2 </span><span class="cov0" title="0">{
+                remoteIP = parts[0]
+        }</span>
+
+        <span class="cov0" title="0">if xff := strings.Trim(r.Header.Get("X-Forwarded-For"), ","); len(xff) &gt; 0 </span><span class="cov0" title="0">{
+                addrs := strings.Split(xff, ",")
+                lastFwd := addrs[len(addrs)-1]
+                if ip := net.ParseIP(lastFwd); ip != nil </span><span class="cov0" title="0">{
+                        remoteIP = ip.String()
+                }</span>
+        } else<span class="cov0" title="0"> if xri := r.Header.Get("X-Real-Ip"); len(xri) &gt; 0 </span><span class="cov0" title="0">{
+                if ip := net.ParseIP(xri); ip != nil </span><span class="cov0" title="0">{
+                        remoteIP = ip.String()
+                }</span>
+        }
+
+        <span class="cov0" title="0">return remoteIP</span>
+
 }
 </pre>
 		
