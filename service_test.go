@@ -30,7 +30,7 @@ func TestNewService(t *testing.T) {
 
 	cnf := ServiceConfig{
 		Interface: "localhost",
-		Port:      1234,
+		Port:      9999,
 	}
 
 	srv := NewService("Test Service", "1.0.0", cnf)
@@ -52,5 +52,14 @@ func TestNewService(t *testing.T) {
 
 	if srv.router == nil {
 		t.Errorf("uninitialized service Router")
+	}
+
+	cnf = ServiceConfig{}
+
+	srv = NewService("Test Service", "1.0.0", cnf)
+
+	expected = "127.0.0.1:1332"
+	if srv.Address != expected {
+		t.Errorf("unexpected listen address: \n\t got %v\n\twant %v", srv.Address, expected)
 	}
 }

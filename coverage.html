@@ -59,7 +59,7 @@
 				
 				<option value="file1">github.com/artziel/go-api-service/sample/main.go (0.0%)</option>
 				
-				<option value="file2">github.com/artziel/go-api-service/service.go (42.9%)</option>
+				<option value="file2">github.com/artziel/go-api-service/service.go (48.6%)</option>
 				
 				<option value="file3">github.com/artziel/go-api-service/tests.go (95.8%)</option>
 				
@@ -210,11 +210,11 @@ func NewService(name string, version string, cnf ServiceConfig) Service <span cl
                 cnf.ReadTimeout = time.Duration(30) * time.Second
         }</span>
 
-        <span class="cov8" title="1">if cnf.Interface == "" </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if cnf.Interface == "" </span><span class="cov8" title="1">{
                 cnf.Interface = "127.0.0.1"
         }</span>
 
-        <span class="cov8" title="1">if cnf.Port == 0 </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if cnf.Port == 0 </span><span class="cov8" title="1">{
                 cnf.Port = 1332
         }</span>
 
