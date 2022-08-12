@@ -3,7 +3,7 @@ package ApiService
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -56,7 +56,7 @@ func SaveTmpFileFromRequest(r *http.Request, formInputName string, destFolder st
 	}
 	defer input.Close()
 
-	file, err := ioutil.TempFile(destFolder, "*."+FixFileName(handler.Filename))
+	file, err := os.CreateTemp(destFolder, "*."+FixFileName(handler.Filename))
 	if err != nil {
 		return "", err
 	}
@@ -79,4 +79,27 @@ func ParseAuthorizationHeader(r *http.Request) string {
 		}
 	}
 	return value
+}
+
+func GetRealIPAddr(r *http.Request) string {
+
+	remoteIP := ""
+	if parts := strings.Split(r.RemoteAddr, ":"); len(parts) == 2 {
+		remoteIP = parts[0]
+	}
+
+	if xff := strings.Trim(r.Header.Get("X-Forwarded-For"), ","); len(xff) > 0 {
+		addrs := strings.Split(xff, ",")
+		lastFwd := addrs[len(addrs)-1]
+		if ip := net.ParseIP(lastFwd); ip != nil {
+			remoteIP = ip.String()
+		}
+	} else if xri := r.Header.Get("X-Real-Ip"); len(xri) > 0 {
+		if ip := net.ParseIP(xri); ip != nil {
+			remoteIP = ip.String()
+		}
+	}
+
+	return remoteIP
+
 }
