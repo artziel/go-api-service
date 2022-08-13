@@ -14,16 +14,16 @@ func welcome(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func sleep10seconds(w http.ResponseWriter, r *http.Request) {
-	time.Sleep(10 * time.Second)
+func sleep2seconds(w http.ResponseWriter, r *http.Request) {
+	time.Sleep(2 * time.Second)
 	ApiService.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"Message": "Wait for 10 seconds!",
+		"Message": "Wait for 2 seconds!",
 	})
 }
 
 func NotFound(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprintf(w, "Not Found Error\n")
+	fmt.Fprintf(w, "Not Found Error")
 }
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 
 	r := srv.Router()
 	r.HandleFunc("/welcome", welcome).Methods("GET")
-	r.HandleFunc("/sleep-10-seconds", sleep10seconds).Methods("GET")
+	r.HandleFunc("/sleep-10-seconds", sleep2seconds).Methods("GET")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
 	if err := srv.ListenAndServe(); err != nil {

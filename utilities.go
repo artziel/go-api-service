@@ -33,37 +33,35 @@ func FixFileName(name string) string {
 }
 
 func SaveFileFromRequest(r *http.Request, formInputName string, dest string) error {
+	var err error
 	file, _, err := r.FormFile(formInputName)
-	if err != nil {
-		return err
+	if err == nil {
+		f, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE, 0666)
+		if err == nil {
+			_, _ = io.Copy(f, file)
+		}
+		defer f.Close()
 	}
 	defer file.Close()
 
-	f, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, _ = io.Copy(f, file)
-
-	return nil
+	return err
 }
 
 func SaveTmpFileFromRequest(r *http.Request, formInputName string, destFolder string) (string, error) {
+	var result string
+	var err error
 	input, handler, err := r.FormFile(formInputName)
-	if err != nil {
-		return "", err
+	if err == nil {
+		file, err := os.CreateTemp(destFolder, "*."+FixFileName(handler.Filename))
+		if err == nil {
+			_, _ = io.Copy(file, input)
+			result = file.Name()
+		}
+		defer file.Close()
 	}
 	defer input.Close()
 
-	file, err := os.CreateTemp(destFolder, "*."+FixFileName(handler.Filename))
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	_, _ = io.Copy(file, input)
-
-	return file.Name(), nil
+	return result, err
 }
 
 func ParseAuthorizationHeader(r *http.Request) string {
@@ -74,8 +72,6 @@ func ParseAuthorizationHeader(r *http.Request) string {
 
 		if prefix == "bearer" {
 			value = strings.TrimSpace(value[7:])
-		} else {
-			value = r.Header.Get("Authorization")
 		}
 	}
 	return value
@@ -101,5 +97,4 @@ func GetRealIPAddr(r *http.Request) string {
 	}
 
 	return remoteIP
-
 }

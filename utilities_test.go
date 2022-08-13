@@ -258,3 +258,18 @@ func TestParseAuthorizationHeader(t *testing.T) {
 		t.Errorf("Unexpected Authorization header value: \n\t got %v\n\twant %v", token, "")
 	}
 }
+
+func TestGetRealIPAddr(t *testing.T) {
+
+	req, err := http.NewRequest("GET", "/ParseAuthorizationHeader", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Add("X-Forwarded-For", "192.168.0.1")
+	req.Header.Add("X-Real-Ip", "192.168.0.2")
+
+	if ip := GetRealIPAddr(req); ip != "192.168.0.1" {
+		t.Errorf("Unexpected IP value: \n\t got %v\n\twant %v", ip, "192.168.0.1")
+	}
+
+}

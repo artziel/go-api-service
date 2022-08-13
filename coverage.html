@@ -59,11 +59,9 @@
 				
 				<option value="file1">github.com/artziel/go-api-service/sample/main.go (0.0%)</option>
 				
-				<option value="file2">github.com/artziel/go-api-service/service.go (48.6%)</option>
+				<option value="file2">github.com/artziel/go-api-service/service.go (51.4%)</option>
 				
-				<option value="file3">github.com/artziel/go-api-service/tests.go (95.8%)</option>
-				
-				<option value="file4">github.com/artziel/go-api-service/utilities.go (63.8%)</option>
+				<option value="file3">github.com/artziel/go-api-service/utilities.go (91.3%)</option>
 				
 				</select>
 			</div>
@@ -128,16 +126,16 @@ func welcome(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0
         })
 }</span>
 
-func sleep10seconds(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
-        time.Sleep(10 * time.Second)
+func sleep2seconds(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        time.Sleep(2 * time.Second)
         ApiService.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-                "Message": "Wait for 10 seconds!",
+                "Message": "Wait for 2 seconds!",
         })
 }</span>
 
 func NotFound(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
         w.WriteHeader(http.StatusNotFound)
-        fmt.Fprintf(w, "Not Found Error\n")
+        fmt.Fprintf(w, "Not Found Error")
 }</span>
 
 func main() <span class="cov0" title="0">{
@@ -151,7 +149,7 @@ func main() <span class="cov0" title="0">{
 
         r := srv.Router()
         r.HandleFunc("/welcome", welcome).Methods("GET")
-        r.HandleFunc("/sleep-10-seconds", sleep10seconds).Methods("GET")
+        r.HandleFunc("/sleep-10-seconds", sleep2seconds).Methods("GET")
         r.NotFoundHandler = http.HandlerFunc(NotFound)
 
         if err := srv.ListenAndServe(); err != nil </span><span class="cov0" title="0">{
@@ -231,7 +229,7 @@ func NewService(name string, version string, cnf ServiceConfig) Service <span cl
         return srv</span>
 }
 
-func (s *Service) Router() *mux.Router <span class="cov0" title="0">{
+func (s *Service) Router() *mux.Router <span class="cov8" title="1">{
         return s.router
 }</span>
 
@@ -286,47 +284,6 @@ func (s *Service) ListenAndServe() error <span class="cov0" title="0">{
 		<pre class="file" id="file3" style="display: none">package ApiService
 
 import (
-        "bytes"
-        "io"
-        "log"
-        "os"
-        "sync"
-)
-
-func captureOutput(f func()) string <span class="cov8" title="1">{
-        reader, writer, err := os.Pipe()
-        if err != nil </span><span class="cov0" title="0">{
-                panic(err)</span>
-        }
-        <span class="cov8" title="1">stdout := os.Stdout
-        stderr := os.Stderr
-        defer func() </span><span class="cov8" title="1">{
-                os.Stdout = stdout
-                os.Stderr = stderr
-                log.SetOutput(os.Stderr)
-        }</span>()
-        <span class="cov8" title="1">os.Stdout = writer
-        os.Stderr = writer
-        log.SetOutput(writer)
-        out := make(chan string)
-        wg := new(sync.WaitGroup)
-        wg.Add(1)
-        go func() </span><span class="cov8" title="1">{
-                var buf bytes.Buffer
-                wg.Done()
-                io.Copy(&amp;buf, reader)
-                out &lt;- buf.String()
-        }</span>()
-        <span class="cov8" title="1">wg.Wait()
-        f()
-        writer.Close()
-        return &lt;-out</span>
-}
-</pre>
-		
-		<pre class="file" id="file4" style="display: none">package ApiService
-
-import (
         "encoding/json"
         "io"
         "net"
@@ -359,37 +316,35 @@ func FixFileName(name string) string <span class="cov8" title="1">{
 }</span>
 
 func SaveFileFromRequest(r *http.Request, formInputName string, dest string) error <span class="cov8" title="1">{
+        var err error
         file, _, err := r.FormFile(formInputName)
-        if err != nil </span><span class="cov0" title="0">{
-                return err
-        }</span>
+        if err == nil </span><span class="cov8" title="1">{
+                f, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE, 0666)
+                if err == nil </span><span class="cov8" title="1">{
+                        _, _ = io.Copy(f, file)
+                }</span>
+                <span class="cov8" title="1">defer f.Close()</span>
+        }
         <span class="cov8" title="1">defer file.Close()
 
-        f, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE, 0666)
-        if err != nil </span><span class="cov0" title="0">{
-                return err
-        }</span>
-        <span class="cov8" title="1">defer f.Close()
-        _, _ = io.Copy(f, file)
-
-        return nil</span>
+        return err</span>
 }
 
 func SaveTmpFileFromRequest(r *http.Request, formInputName string, destFolder string) (string, error) <span class="cov8" title="1">{
+        var result string
+        var err error
         input, handler, err := r.FormFile(formInputName)
-        if err != nil </span><span class="cov0" title="0">{
-                return "", err
-        }</span>
+        if err == nil </span><span class="cov8" title="1">{
+                file, err := os.CreateTemp(destFolder, "*."+FixFileName(handler.Filename))
+                if err == nil </span><span class="cov8" title="1">{
+                        _, _ = io.Copy(file, input)
+                        result = file.Name()
+                }</span>
+                <span class="cov8" title="1">defer file.Close()</span>
+        }
         <span class="cov8" title="1">defer input.Close()
 
-        file, err := os.CreateTemp(destFolder, "*."+FixFileName(handler.Filename))
-        if err != nil </span><span class="cov0" title="0">{
-                return "", err
-        }</span>
-        <span class="cov8" title="1">defer file.Close()
-        _, _ = io.Copy(file, input)
-
-        return file.Name(), nil</span>
+        return result, err</span>
 }
 
 func ParseAuthorizationHeader(r *http.Request) string <span class="cov8" title="1">{
@@ -400,24 +355,22 @@ func ParseAuthorizationHeader(r *http.Request) string <span class="cov8" title="
 
                 if prefix == "bearer" </span><span class="cov8" title="1">{
                         value = strings.TrimSpace(value[7:])
-                }</span> else<span class="cov0" title="0"> {
-                        value = r.Header.Get("Authorization")
                 }</span>
         }
         <span class="cov8" title="1">return value</span>
 }
 
-func GetRealIPAddr(r *http.Request) string <span class="cov0" title="0">{
+func GetRealIPAddr(r *http.Request) string <span class="cov8" title="1">{
 
         remoteIP := ""
         if parts := strings.Split(r.RemoteAddr, ":"); len(parts) == 2 </span><span class="cov0" title="0">{
                 remoteIP = parts[0]
         }</span>
 
-        <span class="cov0" title="0">if xff := strings.Trim(r.Header.Get("X-Forwarded-For"), ","); len(xff) &gt; 0 </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if xff := strings.Trim(r.Header.Get("X-Forwarded-For"), ","); len(xff) &gt; 0 </span><span class="cov8" title="1">{
                 addrs := strings.Split(xff, ",")
                 lastFwd := addrs[len(addrs)-1]
-                if ip := net.ParseIP(lastFwd); ip != nil </span><span class="cov0" title="0">{
+                if ip := net.ParseIP(lastFwd); ip != nil </span><span class="cov8" title="1">{
                         remoteIP = ip.String()
                 }</span>
         } else<span class="cov0" title="0"> if xri := r.Header.Get("X-Real-Ip"); len(xri) &gt; 0 </span><span class="cov0" title="0">{
@@ -426,8 +379,7 @@ func GetRealIPAddr(r *http.Request) string <span class="cov0" title="0">{
                 }</span>
         }
 
-        <span class="cov0" title="0">return remoteIP</span>
-
+        <span class="cov8" title="1">return remoteIP</span>
 }
 </pre>
 		
