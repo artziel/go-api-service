@@ -296,14 +296,23 @@ import (
         "strings"
 )
 
+/*
+Encode a golang error in JSON format and write to the response writer
+*/
 func RespondWithJSONError(w http.ResponseWriter, code int, err error) <span class="cov8" title="1">{
         RespondWithJSON(w, code, map[string]string{"message": err.Error()})
 }</span>
 
+/*
+Encode a text message in JSON format and write to the response writer
+*/
 func RespondWithJSONMessage(w http.ResponseWriter, code int, message string) <span class="cov8" title="1">{
         RespondWithJSON(w, code, map[string]string{"message": message})
 }</span>
 
+/*
+Encode a interface data in JSON format and write to the response writer
+*/
 func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) <span class="cov8" title="1">{
         response, _ := json.Marshal(payload)
 
