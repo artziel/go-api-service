@@ -404,10 +404,10 @@ func GetRealIPAddr(r *http.Request) string <span class="cov8" title="1">{
         var xff string = xffIP(r)
         var xri string = xriIP(r)
 
-        if xri != "" </span><span class="cov8" title="1">{
+        if xff != "" </span><span class="cov8" title="1">{
                 remoteIP = xff
         }</span>
-        <span class="cov8" title="1">if xff != "" </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">if xri != "" </span><span class="cov8" title="1">{
                 remoteIP = xff
         }</span>
 

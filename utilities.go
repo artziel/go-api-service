@@ -118,10 +118,10 @@ func GetRealIPAddr(r *http.Request) string {
 	var xff string = xffIP(r)
 	var xri string = xriIP(r)
 
-	if xri != "" {
+	if xff != "" {
 		remoteIP = xff
 	}
-	if xff != "" {
+	if xri != "" {
 		remoteIP = xff
 	}
 
