@@ -77,23 +77,52 @@ func ParseAuthorizationHeader(r *http.Request) string {
 	return value
 }
 
-func GetRealIPAddr(r *http.Request) string {
+func xffIP(r *http.Request) string {
+	var remoteIP string
+	var xff string = strings.Trim(r.Header.Get("X-Forwarded-For"), ",")
 
-	remoteIP := ""
-	if parts := strings.Split(r.RemoteAddr, ":"); len(parts) == 2 {
-		remoteIP = parts[0]
-	}
-
-	if xff := strings.Trim(r.Header.Get("X-Forwarded-For"), ","); len(xff) > 0 {
+	if len(xff) != 0 {
 		addrs := strings.Split(xff, ",")
 		lastFwd := addrs[len(addrs)-1]
 		if ip := net.ParseIP(lastFwd); ip != nil {
 			remoteIP = ip.String()
 		}
-	} else if xri := r.Header.Get("X-Real-Ip"); len(xri) > 0 {
-		if ip := net.ParseIP(xri); ip != nil {
-			remoteIP = ip.String()
-		}
+	}
+	return remoteIP
+}
+
+func xriIP(r *http.Request) string {
+	var remoteIP string
+	var xri string = r.Header.Get("X-Real-Ip")
+
+	if ip := net.ParseIP(xri); ip != nil {
+		remoteIP = ip.String()
+	}
+
+	return remoteIP
+}
+
+func remoteAddr(r *http.Request) string {
+	ip := ""
+	var parts []string = strings.Split(r.RemoteAddr, ":")
+
+	if len(parts) == 2 {
+		ip = parts[0]
+	}
+
+	return ip
+}
+
+func GetRealIPAddr(r *http.Request) string {
+	var remoteIP string = remoteAddr(r)
+	var xff string = xffIP(r)
+	var xri string = xriIP(r)
+
+	if xri != "" {
+		remoteIP = xff
+	}
+	if xff != "" {
+		remoteIP = xff
 	}
 
 	return remoteIP

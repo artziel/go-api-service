@@ -23,6 +23,7 @@ type Service struct {
 	WriteTimeout    time.Duration
 	ReadTimeout     time.Duration
 	ShutdownTimeout time.Duration
+	srv             *http.Server
 	router          *mux.Router
 }
 
@@ -66,6 +67,13 @@ func NewService(name string, version string, cnf ServiceConfig) Service {
 		router:          mux.NewRouter(),
 	}
 
+	srv.srv = &http.Server{
+		Handler:      srv.router,
+		Addr:         srv.Address,
+		WriteTimeout: srv.WriteTimeout,
+		ReadTimeout:  srv.ReadTimeout,
+	}
+
 	return srv
 }
 
@@ -90,32 +98,27 @@ func stopChannel() (chan os.Signal, func()) {
 }
 
 func shutdown(ctx context.Context, server *http.Server, timeout time.Duration) error {
+	var err error
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		return err
-	} else {
-		return ErrGracefullShutdown
+	err = server.Shutdown(ctx)
+	if err == nil {
+		err = ErrGracefullShutdown
 	}
+
+	return err
 }
 
 func (s *Service) ListenAndServe() error {
-	srv := &http.Server{
-		Handler:      s.router,
-		Addr:         s.Address,
-		WriteTimeout: s.WriteTimeout,
-		ReadTimeout:  s.ReadTimeout,
-	}
-
 	go func(srv *http.Server) {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			panic(err)
 		}
-	}(srv)
+	}(s.srv)
 	stopCh, closeCh := stopChannel()
 	defer closeCh()
 	log.Println("Shutdown Notified (Timeout 30sec):", <-stopCh)
 
-	return shutdown(context.Background(), srv, s.ShutdownTimeout)
+	return shutdown(context.Background(), s.srv, s.ShutdownTimeout)
 }

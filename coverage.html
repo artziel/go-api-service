@@ -59,9 +59,9 @@
 				
 				<option value="file1">github.com/artziel/go-api-service/sample/main.go (0.0%)</option>
 				
-				<option value="file2">github.com/artziel/go-api-service/service.go (51.4%)</option>
+				<option value="file2">github.com/artziel/go-api-service/service.go (94.6%)</option>
 				
-				<option value="file3">github.com/artziel/go-api-service/utilities.go (91.3%)</option>
+				<option value="file3">github.com/artziel/go-api-service/utilities.go (98.3%)</option>
 				
 				</select>
 			</div>
@@ -183,6 +183,7 @@ type Service struct {
         WriteTimeout    time.Duration
         ReadTimeout     time.Duration
         ShutdownTimeout time.Duration
+        srv             *http.Server
         router          *mux.Router
 }
 
@@ -226,6 +227,13 @@ func NewService(name string, version string, cnf ServiceConfig) Service <span cl
                 router:          mux.NewRouter(),
         }
 
+        srv.srv = &amp;http.Server{
+                Handler:      srv.router,
+                Addr:         srv.Address,
+                WriteTimeout: srv.WriteTimeout,
+                ReadTimeout:  srv.ReadTimeout,
+        }
+
         return srv</span>
 }
 
@@ -241,7 +249,7 @@ func (s *Service) PrintWelcome() <span class="cov8" title="1">{
         fmt.Println("------------------------------------------------------------")
 }</span>
 
-func stopChannel() (chan os.Signal, func()) <span class="cov0" title="0">{
+func stopChannel() (chan os.Signal, func()) <span class="cov8" title="1">{
         stopCh := make(chan os.Signal, 1)
         signal.Notify(stopCh, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
         return stopCh, func() </span><span class="cov0" title="0">{
@@ -249,35 +257,30 @@ func stopChannel() (chan os.Signal, func()) <span class="cov0" title="0">{
         }</span>
 }
 
-func shutdown(ctx context.Context, server *http.Server, timeout time.Duration) error <span class="cov0" title="0">{
+func shutdown(ctx context.Context, server *http.Server, timeout time.Duration) error <span class="cov8" title="1">{
+        var err error
         ctx, cancel := context.WithTimeout(ctx, timeout)
         defer cancel()
 
-        if err := server.Shutdown(ctx); err != nil </span><span class="cov0" title="0">{
-                return err
-        }</span> else<span class="cov0" title="0"> {
-                return ErrGracefullShutdown
+        err = server.Shutdown(ctx)
+        if err == nil </span><span class="cov8" title="1">{
+                err = ErrGracefullShutdown
         }</span>
+
+        <span class="cov8" title="1">return err</span>
 }
 
-func (s *Service) ListenAndServe() error <span class="cov0" title="0">{
-        srv := &amp;http.Server{
-                Handler:      s.router,
-                Addr:         s.Address,
-                WriteTimeout: s.WriteTimeout,
-                ReadTimeout:  s.ReadTimeout,
-        }
-
-        go func(srv *http.Server) </span><span class="cov0" title="0">{
+func (s *Service) ListenAndServe() error <span class="cov8" title="1">{
+        go func(srv *http.Server) </span><span class="cov8" title="1">{
                 if err := srv.ListenAndServe(); err != nil &amp;&amp; !errors.Is(err, http.ErrServerClosed) </span><span class="cov0" title="0">{
                         panic(err)</span>
                 }
-        }(srv)
-        <span class="cov0" title="0">stopCh, closeCh := stopChannel()
+        }(s.srv)
+        <span class="cov8" title="1">stopCh, closeCh := stopChannel()
         defer closeCh()
         log.Println("Shutdown Notified (Timeout 30sec):", &lt;-stopCh)
 
-        return shutdown(context.Background(), srv, s.ShutdownTimeout)</span>
+        return shutdown(context.Background(), s.srv, s.ShutdownTimeout)</span>
 }
 </pre>
 		
@@ -360,24 +363,53 @@ func ParseAuthorizationHeader(r *http.Request) string <span class="cov8" title="
         <span class="cov8" title="1">return value</span>
 }
 
-func GetRealIPAddr(r *http.Request) string <span class="cov8" title="1">{
+func xffIP(r *http.Request) string <span class="cov8" title="1">{
+        var remoteIP string
+        var xff string = strings.Trim(r.Header.Get("X-Forwarded-For"), ",")
 
-        remoteIP := ""
-        if parts := strings.Split(r.RemoteAddr, ":"); len(parts) == 2 </span><span class="cov0" title="0">{
-                remoteIP = parts[0]
-        }</span>
-
-        <span class="cov8" title="1">if xff := strings.Trim(r.Header.Get("X-Forwarded-For"), ","); len(xff) &gt; 0 </span><span class="cov8" title="1">{
+        if len(xff) != 0 </span><span class="cov8" title="1">{
                 addrs := strings.Split(xff, ",")
                 lastFwd := addrs[len(addrs)-1]
                 if ip := net.ParseIP(lastFwd); ip != nil </span><span class="cov8" title="1">{
                         remoteIP = ip.String()
                 }</span>
-        } else<span class="cov0" title="0"> if xri := r.Header.Get("X-Real-Ip"); len(xri) &gt; 0 </span><span class="cov0" title="0">{
-                if ip := net.ParseIP(xri); ip != nil </span><span class="cov0" title="0">{
-                        remoteIP = ip.String()
-                }</span>
         }
+        <span class="cov8" title="1">return remoteIP</span>
+}
+
+func xriIP(r *http.Request) string <span class="cov8" title="1">{
+        var remoteIP string
+        var xri string = r.Header.Get("X-Real-Ip")
+
+        if ip := net.ParseIP(xri); ip != nil </span><span class="cov8" title="1">{
+                remoteIP = ip.String()
+        }</span>
+
+        <span class="cov8" title="1">return remoteIP</span>
+}
+
+func remoteAddr(r *http.Request) string <span class="cov8" title="1">{
+        ip := ""
+        var parts []string = strings.Split(r.RemoteAddr, ":")
+
+        if len(parts) == 2 </span><span class="cov0" title="0">{
+                ip = parts[0]
+        }</span>
+
+        <span class="cov8" title="1">return ip</span>
+}
+
+func GetRealIPAddr(r *http.Request) string <span class="cov8" title="1">{
+        var remoteIP string = remoteAddr(r)
+        var xff string = xffIP(r)
+        var xri string = xriIP(r)
+
+        if xri != "" </span><span class="cov8" title="1">{
+                remoteIP = xff
+        }</span>
+        <span class="cov8" title="1">if xff != "" </span><span class="cov8" title="1">{
+                remoteIP = xff
+        }</span>
 
         <span class="cov8" title="1">return remoteIP</span>
 }

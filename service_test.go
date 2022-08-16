@@ -2,12 +2,14 @@ package ApiService
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"sync"
 	"testing"
+	"time"
 )
 
 func captureOutput(f func()) string {
@@ -102,4 +104,28 @@ func TestNewService(t *testing.T) {
 	if srv.Address != expected {
 		t.Errorf("unexpected listen address: \n\t got %v\n\twant %v", srv.Address, expected)
 	}
+}
+
+func TestListenAndServe(t *testing.T) {
+	cnf := ServiceConfig{
+		Interface:       "localhost",
+		Port:            9999,
+		ShutdownTimeout: 1 * time.Second,
+	}
+
+	srv := NewService("Test Service", "1.0.0", cnf)
+
+	go func(s *Service) {
+		err := srv.ListenAndServe()
+		if err != nil {
+			t.Errorf("Service Listeng return unexpected error:\ngot  %s\nwant NoError", err)
+		}
+	}(&srv)
+
+	err := shutdown(context.Background(), srv.srv, srv.ShutdownTimeout)
+	if err != ErrGracefullShutdown {
+		t.Errorf("Service shutdown return unexpected error:\ngot  %s\nwant %s", err, ErrGracefullShutdown)
+	}
+
+	// syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 }
