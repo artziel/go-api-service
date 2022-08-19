@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -118,7 +117,8 @@ func (s *Service) ListenAndServe() error {
 	}(s.srv)
 	stopCh, closeCh := stopChannel()
 	defer closeCh()
-	log.Println("Shutdown Notified (Timeout 30sec):", <-stopCh)
+
+	<-stopCh
 
 	return shutdown(context.Background(), s.srv, s.ShutdownTimeout)
 }
