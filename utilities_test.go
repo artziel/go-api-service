@@ -265,6 +265,7 @@ func TestGetRealIPAddr(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.RemoteAddr = "192.168.0.1:888"
 	req.Header.Add("X-Forwarded-For", "192.168.0.1")
 	req.Header.Add("X-Real-Ip", "192.168.0.2")
 

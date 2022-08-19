@@ -59,7 +59,7 @@
 				
 				<option value="file1">github.com/artziel/go-api-service/service.go (94.6%)</option>
 				
-				<option value="file2">github.com/artziel/go-api-service/utilities.go (98.3%)</option>
+				<option value="file2">github.com/artziel/go-api-service/utilities.go (100.0%)</option>
 				
 				</select>
 			</div>
@@ -114,7 +114,6 @@ import (
         "context"
         "errors"
         "fmt"
-        "log"
         "net/http"
         "os"
         "os/signal"
@@ -228,7 +227,8 @@ func (s *Service) ListenAndServe() error <span class="cov8" title="1">{
         }(s.srv)
         <span class="cov8" title="1">stopCh, closeCh := stopChannel()
         defer closeCh()
-        log.Println("Shutdown Notified (Timeout 30sec):", &lt;-stopCh)
+
+        &lt;-stopCh
 
         return shutdown(context.Background(), s.srv, s.ShutdownTimeout)</span>
 }
@@ -351,7 +351,7 @@ func remoteAddr(r *http.Request) string <span class="cov8" title="1">{
         ip := ""
         var parts []string = strings.Split(r.RemoteAddr, ":")
 
-        if len(parts) == 2 </span><span class="cov0" title="0">{
+        if len(parts) == 2 </span><span class="cov8" title="1">{
                 ip = parts[0]
         }</span>
 
