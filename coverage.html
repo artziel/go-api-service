@@ -57,11 +57,9 @@
 				
 				<option value="file0">github.com/artziel/go-api-service/middleware.go (100.0%)</option>
 				
-				<option value="file1">github.com/artziel/go-api-service/sample/main.go (0.0%)</option>
+				<option value="file1">github.com/artziel/go-api-service/service.go (94.6%)</option>
 				
-				<option value="file2">github.com/artziel/go-api-service/service.go (94.6%)</option>
-				
-				<option value="file3">github.com/artziel/go-api-service/utilities.go (98.3%)</option>
+				<option value="file2">github.com/artziel/go-api-service/utilities.go (98.3%)</option>
 				
 				</select>
 			</div>
@@ -110,55 +108,7 @@ func MiddlewareRestrictToLocal(next http.Handler) http.Handler <span class="cov8
 }
 </pre>
 		
-		<pre class="file" id="file1" style="display: none">package main
-
-import (
-        "fmt"
-        "net/http"
-        "time"
-
-        ApiService "github.com/artziel/go-api-service"
-)
-
-func welcome(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
-        ApiService.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-                "Message": "Welcome to API Service sample in Golang!",
-        })
-}</span>
-
-func sleep2seconds(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
-        time.Sleep(2 * time.Second)
-        ApiService.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-                "Message": "Wait for 2 seconds!",
-        })
-}</span>
-
-func NotFound(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
-        w.WriteHeader(http.StatusNotFound)
-        fmt.Fprintf(w, "Not Found Error")
-}</span>
-
-func main() <span class="cov0" title="0">{
-        srv := ApiService.NewService(
-                "Sample Restful Service",
-                "1.0.0b",
-                ApiService.ServiceConfig{
-                        Port: 8080,
-                },
-        )
-
-        r := srv.Router()
-        r.HandleFunc("/welcome", welcome).Methods("GET")
-        r.HandleFunc("/sleep-10-seconds", sleep2seconds).Methods("GET")
-        r.NotFoundHandler = http.HandlerFunc(NotFound)
-
-        if err := srv.ListenAndServe(); err != nil </span><span class="cov0" title="0">{
-                fmt.Println(err.Error())
-        }</span>
-}
-</pre>
-		
-		<pre class="file" id="file2" style="display: none">package ApiService
+		<pre class="file" id="file1" style="display: none">package ApiService
 
 import (
         "context"
@@ -284,7 +234,7 @@ func (s *Service) ListenAndServe() error <span class="cov8" title="1">{
 }
 </pre>
 		
-		<pre class="file" id="file3" style="display: none">package ApiService
+		<pre class="file" id="file2" style="display: none">package ApiService
 
 import (
         "encoding/json"
