@@ -28,8 +28,6 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	srv := ApiService.NewService(
-		"Sample Restful Service",
-		"1.0.0b",
 		ApiService.ServiceConfig{
 			Port: 8080,
 		},

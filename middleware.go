@@ -1,4 +1,4 @@
-package ApiService
+package rest
 
 import (
 	"log"
@@ -12,7 +12,7 @@ func MiddlewareAccessLog(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(response http.ResponseWriter, request *http.Request) {
 			log.Printf(
-				"PID %d, Rotines %d - [%s] from IP: %s - URL: %s\n",
+				"PID %d, Routines %d - [%s] from IP: %s - URL: %s\n",
 				os.Getpid(), runtime.NumGoroutine(),
 				request.Method, request.RemoteAddr, request.URL,
 			)

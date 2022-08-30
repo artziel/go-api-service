@@ -1,4 +1,4 @@
-package ApiService
+package rest
 
 import (
 	"encoding/csv"

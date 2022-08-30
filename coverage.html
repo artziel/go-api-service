@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/artziel/go-api-service/middleware.go (100.0%)</option>
 				
-				<option value="file1">github.com/artziel/go-api-service/service.go (94.6%)</option>
+				<option value="file1">github.com/artziel/go-api-service/service.go (92.9%)</option>
 				
 				<option value="file2">github.com/artziel/go-api-service/utilities.go (100.0%)</option>
 				
@@ -73,7 +73,7 @@
 		</div>
 		<div id="content">
 		
-		<pre class="file" id="file0" style="display: none">package ApiService
+		<pre class="file" id="file0" style="display: none">package rest
 
 import (
         "log"
@@ -87,7 +87,7 @@ func MiddlewareAccessLog(next http.Handler) http.Handler <span class="cov8" titl
         return http.HandlerFunc(
                 func(response http.ResponseWriter, request *http.Request) </span><span class="cov8" title="1">{
                         log.Printf(
-                                "PID %d, Rotines %d - [%s] from IP: %s - URL: %s\n",
+                                "PID %d, Routines %d - [%s] from IP: %s - URL: %s\n",
                                 os.Getpid(), runtime.NumGoroutine(),
                                 request.Method, request.RemoteAddr, request.URL,
                         )
@@ -108,7 +108,7 @@ func MiddlewareRestrictToLocal(next http.Handler) http.Handler <span class="cov8
 }
 </pre>
 		
-		<pre class="file" id="file1" style="display: none">package ApiService
+		<pre class="file" id="file1" style="display: none">package rest
 
 import (
         "context"
@@ -126,8 +126,6 @@ import (
 var ErrGracefullShutdown = errors.New("service stopped gracefully")
 
 type Service struct {
-        Version         string
-        Name            string
         Address         string
         WriteTimeout    time.Duration
         ReadTimeout     time.Duration
@@ -144,7 +142,7 @@ type ServiceConfig struct {
         ReadTimeout     time.Duration
 }
 
-func NewService(name string, version string, cnf ServiceConfig) Service <span class="cov8" title="1">{
+func NewService(cnf ServiceConfig) Service <span class="cov8" title="1">{
 
         if cnf.ShutdownTimeout == 0 </span><span class="cov8" title="1">{
                 cnf.ShutdownTimeout = time.Duration(30) * time.Second
@@ -167,8 +165,6 @@ func NewService(name string, version string, cnf ServiceConfig) Service <span cl
         }</span>
 
         <span class="cov8" title="1">srv := Service{
-                Name:            name,
-                Version:         version,
                 Address:         fmt.Sprintf("%v:%v", cnf.Interface, cnf.Port),
                 ShutdownTimeout: cnf.ShutdownTimeout,
                 WriteTimeout:    cnf.WriteTimeout,
@@ -190,14 +186,6 @@ func (s *Service) Router() *mux.Router <span class="cov8" title="1">{
         return s.router
 }</span>
 
-func (s *Service) PrintWelcome() <span class="cov8" title="1">{
-        fmt.Println("------------------------------------------------------------")
-        fmt.Println(s.Name + " v" + s.Version)
-        fmt.Println("------------------------------------------------------------")
-        fmt.Printf("* Address: %v\n", s.Address)
-        fmt.Println("------------------------------------------------------------")
-}</span>
-
 func stopChannel() (chan os.Signal, func()) <span class="cov8" title="1">{
         stopCh := make(chan os.Signal, 1)
         signal.Notify(stopCh, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
@@ -207,17 +195,11 @@ func stopChannel() (chan os.Signal, func()) <span class="cov8" title="1">{
 }
 
 func shutdown(ctx context.Context, server *http.Server, timeout time.Duration) error <span class="cov8" title="1">{
-        var err error
         ctx, cancel := context.WithTimeout(ctx, timeout)
         defer cancel()
 
-        err = server.Shutdown(ctx)
-        if err == nil </span><span class="cov8" title="1">{
-                err = ErrGracefullShutdown
-        }</span>
-
-        <span class="cov8" title="1">return err</span>
-}
+        return server.Shutdown(ctx)
+}</span>
 
 func (s *Service) ListenAndServe() error <span class="cov8" title="1">{
         go func(srv *http.Server) </span><span class="cov8" title="1">{
@@ -234,7 +216,7 @@ func (s *Service) ListenAndServe() error <span class="cov8" title="1">{
 }
 </pre>
 		
-		<pre class="file" id="file2" style="display: none">package ApiService
+		<pre class="file" id="file2" style="display: none">package rest
 
 import (
         "encoding/json"

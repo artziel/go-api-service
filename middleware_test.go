@@ -1,4 +1,4 @@
-package ApiService
+package rest
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ func TestMiddlewareAccessLog(t *testing.T) {
 
 	result := strings.TrimSuffix(str.String(), "\n")
 	match, _ := regexp.MatchString(
-		`^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} PID [0-9]+, Rotines [0-9]{1,6} - \[(GET|POST|PUT|DELETE|OPTION)\] from IP: [0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{1,4} - URL: /\w+$`,
+		`^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} PID [0-9]+, Routines [0-9]{1,6} - \[(GET|POST|PUT|DELETE|OPTION)\] from IP: [0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{1,4} - URL: /\w+$`,
 		result,
 	)
 	if !match {

@@ -1,4 +1,4 @@
-package ApiService
+package rest
 
 import (
 	"context"
@@ -16,8 +16,6 @@ import (
 var ErrGracefullShutdown = errors.New("service stopped gracefully")
 
 type Service struct {
-	Version         string
-	Name            string
 	Address         string
 	WriteTimeout    time.Duration
 	ReadTimeout     time.Duration
@@ -34,7 +32,7 @@ type ServiceConfig struct {
 	ReadTimeout     time.Duration
 }
 
-func NewService(name string, version string, cnf ServiceConfig) Service {
+func NewService(cnf ServiceConfig) Service {
 
 	if cnf.ShutdownTimeout == 0 {
 		cnf.ShutdownTimeout = time.Duration(30) * time.Second
@@ -57,8 +55,6 @@ func NewService(name string, version string, cnf ServiceConfig) Service {
 	}
 
 	srv := Service{
-		Name:            name,
-		Version:         version,
 		Address:         fmt.Sprintf("%v:%v", cnf.Interface, cnf.Port),
 		ShutdownTimeout: cnf.ShutdownTimeout,
 		WriteTimeout:    cnf.WriteTimeout,
@@ -80,14 +76,6 @@ func (s *Service) Router() *mux.Router {
 	return s.router
 }
 
-func (s *Service) PrintWelcome() {
-	fmt.Println("------------------------------------------------------------")
-	fmt.Println(s.Name + " v" + s.Version)
-	fmt.Println("------------------------------------------------------------")
-	fmt.Printf("* Address: %v\n", s.Address)
-	fmt.Println("------------------------------------------------------------")
-}
-
 func stopChannel() (chan os.Signal, func()) {
 	stopCh := make(chan os.Signal, 1)
 	signal.Notify(stopCh, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
@@ -97,16 +85,10 @@ func stopChannel() (chan os.Signal, func()) {
 }
 
 func shutdown(ctx context.Context, server *http.Server, timeout time.Duration) error {
-	var err error
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	err = server.Shutdown(ctx)
-	if err == nil {
-		err = ErrGracefullShutdown
-	}
-
-	return err
+	return server.Shutdown(ctx)
 }
 
 func (s *Service) ListenAndServe() error {
