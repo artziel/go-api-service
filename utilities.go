@@ -39,7 +39,7 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 }
 
 /*
-Reads the form information of a request and assigns the data to its corresponding structure fields
+Reads the form information of a request and assigns the form data to its corresponding structure fields
 */
 func FormToStruct(r *http.Request, model interface{}) error {
 	v := reflect.ValueOf(model)
