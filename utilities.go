@@ -45,7 +45,7 @@ func FormToStruct(r *http.Request, model interface{}) error {
 	v := reflect.ValueOf(model)
 
 	if v.Kind() != reflect.Ptr {
-		return errors.New("function \"NewFromRequest\" expect a pointer")
+		return errors.New("function \"FormToStruct\" expect an struct ptr")
 	}
 
 	for i := 0; i < v.Elem().NumField(); i++ {
