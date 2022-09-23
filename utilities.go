@@ -2,11 +2,14 @@ package rest
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -33,6 +36,44 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(response)
+}
+
+/*
+Reads the form information of a request and assigns the data to its corresponding structure fields
+*/
+func FormToStruct(r *http.Request, model interface{}) error {
+	v := reflect.ValueOf(model)
+
+	if v.Kind() != reflect.Ptr {
+		return errors.New("function \"NewFromRequest\" expect a pointer")
+	}
+
+	for i := 0; i < v.Elem().NumField(); i++ {
+		tag := v.Elem().Type().Field(i).Tag.Get("form")
+		if tag != "" {
+			value := r.FormValue(tag)
+			if value != "" {
+				switch v.Elem().Type().Field(i).Type.Kind() {
+				case reflect.Bool:
+					val, _ := strconv.ParseBool(value)
+					v.Elem().Field(i).SetBool(val)
+				case reflect.String:
+					v.Elem().Field(i).SetString(value)
+				case reflect.Float32, reflect.Float64:
+					val, _ := strconv.ParseFloat(value, 64)
+					v.Elem().Field(i).SetFloat(val)
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					val, _ := strconv.Atoi(value)
+					v.Elem().Field(i).SetInt(int64(val))
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+					val, _ := strconv.Atoi(value)
+					v.Elem().Field(i).SetUint(uint64(val))
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func FixFileName(name string) string {
