@@ -13,8 +13,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var ErrGracefullShutdown = errors.New("service stopped gracefully")
-
 type Service struct {
 	Address         string
 	WriteTimeout    time.Duration

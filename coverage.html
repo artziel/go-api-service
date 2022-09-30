@@ -57,9 +57,11 @@
 				
 				<option value="file0">github.com/artziel/go-api-service/middleware.go (100.0%)</option>
 				
-				<option value="file1">github.com/artziel/go-api-service/service.go (92.9%)</option>
+				<option value="file1">github.com/artziel/go-api-service/response.go (100.0%)</option>
 				
-				<option value="file2">github.com/artziel/go-api-service/utilities.go (100.0%)</option>
+				<option value="file2">github.com/artziel/go-api-service/service.go (92.9%)</option>
+				
+				<option value="file3">github.com/artziel/go-api-service/utilities.go (100.0%)</option>
 				
 				</select>
 			</div>
@@ -111,6 +113,52 @@ func MiddlewareRestrictToLocal(next http.Handler) http.Handler <span class="cov8
 		<pre class="file" id="file1" style="display: none">package rest
 
 import (
+        "encoding/json"
+        "net/http"
+)
+
+/*
+Encode a interface data in JSON format and write to the response writer
+*/
+func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) <span class="cov8" title="1">{
+        response, _ := json.Marshal(payload)
+
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(code)
+        w.Write(response)
+}</span>
+
+/*
+Encode a golang error in JSON format and write to the response writer
+*/
+func RespondWithJSONError(w http.ResponseWriter, code int, err error) <span class="cov8" title="1">{
+        RespondWithJSON(w, code, map[string]string{"message": err.Error()})
+}</span>
+
+/*
+Encode a text message in JSON format and write to the response writer
+*/
+func RespondWithJSONMessage(w http.ResponseWriter, code int, message string) <span class="cov8" title="1">{
+        RespondWithJSON(w, code, map[string]string{"message": message})
+}</span>
+
+/*
+Encode a interface data in JSON format and write to the response writer wraped in
+a hmac secured structure
+*/
+func RespondWithJSONHMAC(w http.ResponseWriter, code int, payload interface{}, secretKey string) <span class="cov8" title="1">{
+        encoded, _ := json.Marshal(payload)
+
+        hmac := NewHash(string(encoded), secretKey)
+
+        w.Header().Set("Service-Content-Hash", hmac)
+        RespondWithJSON(w, code, payload)
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package rest
+
+import (
         "context"
         "errors"
         "fmt"
@@ -122,8 +170,6 @@ import (
 
         "github.com/gorilla/mux"
 )
-
-var ErrGracefullShutdown = errors.New("service stopped gracefully")
 
 type Service struct {
         Address         string
@@ -216,42 +262,65 @@ func (s *Service) ListenAndServe() error <span class="cov8" title="1">{
 }
 </pre>
 		
-		<pre class="file" id="file2" style="display: none">package rest
+		<pre class="file" id="file3" style="display: none">package rest
 
 import (
-        "encoding/json"
+        "crypto/hmac"
+        "crypto/sha512"
+        "fmt"
         "io"
         "net"
         "net/http"
         "os"
+        "reflect"
         "regexp"
+        "strconv"
         "strings"
 )
 
-/*
-Encode a golang error in JSON format and write to the response writer
-*/
-func RespondWithJSONError(w http.ResponseWriter, code int, err error) <span class="cov8" title="1">{
-        RespondWithJSON(w, code, map[string]string{"message": err.Error()})
+func NewHash(payload string, secretKey string) string <span class="cov8" title="1">{
+        h := hmac.New(sha512.New, []byte(secretKey))
+        io.WriteString(h, payload)
+        return fmt.Sprintf("%x", h.Sum(nil))
 }</span>
 
 /*
-Encode a text message in JSON format and write to the response writer
+Reads the form information of a request and assigns the form data to its corresponding structure fields
 */
-func RespondWithJSONMessage(w http.ResponseWriter, code int, message string) <span class="cov8" title="1">{
-        RespondWithJSON(w, code, map[string]string{"message": message})
-}</span>
+func FormToStruct(r *http.Request, model interface{}) error <span class="cov8" title="1">{
+        v := reflect.ValueOf(model)
 
-/*
-Encode a interface data in JSON format and write to the response writer
-*/
-func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) <span class="cov8" title="1">{
-        response, _ := json.Marshal(payload)
+        if v.Kind() != reflect.Ptr </span><span class="cov8" title="1">{
+                return ErrFormToStructPtrExpected
+        }</span>
 
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(code)
-        w.Write(response)
-}</span>
+        <span class="cov8" title="1">for i := 0; i &lt; v.Elem().NumField(); i++ </span><span class="cov8" title="1">{
+                tag := v.Elem().Type().Field(i).Tag.Get("form")
+                if tag != "" </span><span class="cov8" title="1">{
+                        value := r.FormValue(tag)
+                        if value != "" </span><span class="cov8" title="1">{
+                                switch v.Elem().Type().Field(i).Type.Kind() </span>{
+                                case reflect.Bool:<span class="cov8" title="1">
+                                        val, _ := strconv.ParseBool(value)
+                                        v.Elem().Field(i).SetBool(val)</span>
+                                case reflect.String:<span class="cov8" title="1">
+                                        v.Elem().Field(i).SetString(value)</span>
+                                case reflect.Float32, reflect.Float64:<span class="cov8" title="1">
+                                        val, _ := strconv.ParseFloat(value, 64)
+                                        v.Elem().Field(i).SetFloat(val)</span>
+                                case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:<span class="cov8" title="1">
+                                        val, _ := strconv.Atoi(value)
+                                        v.Elem().Field(i).SetInt(int64(val))</span>
+                                case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:<span class="cov8" title="1">
+                                        val, _ := strconv.Atoi(value)
+                                        v.Elem().Field(i).SetUint(uint64(val))</span>
+                                }
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
 
 func FixFileName(name string) string <span class="cov8" title="1">{
         r := regexp.MustCompile("[^aA-zZ0-9ñÑáÁéÉíÍóÓúÚ._()]+")

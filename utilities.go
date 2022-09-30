@@ -1,8 +1,9 @@
 package rest
 
 import (
-	"encoding/json"
-	"errors"
+	"crypto/hmac"
+	"crypto/sha512"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -14,28 +15,12 @@ import (
 )
 
 /*
-Encode a golang error in JSON format and write to the response writer
+Generate a hash sha512
 */
-func RespondWithJSONError(w http.ResponseWriter, code int, err error) {
-	RespondWithJSON(w, code, map[string]string{"message": err.Error()})
-}
-
-/*
-Encode a text message in JSON format and write to the response writer
-*/
-func RespondWithJSONMessage(w http.ResponseWriter, code int, message string) {
-	RespondWithJSON(w, code, map[string]string{"message": message})
-}
-
-/*
-Encode a interface data in JSON format and write to the response writer
-*/
-func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, _ := json.Marshal(payload)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	w.Write(response)
+func NewHash(payload string, secretKey string) string {
+	h := hmac.New(sha512.New, []byte(secretKey))
+	io.WriteString(h, payload)
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 /*
@@ -45,7 +30,7 @@ func FormToStruct(r *http.Request, model interface{}) error {
 	v := reflect.ValueOf(model)
 
 	if v.Kind() != reflect.Ptr {
-		return errors.New("function \"FormToStruct\" expect an struct ptr")
+		return ErrFormToStructPtrExpected
 	}
 
 	for i := 0; i < v.Elem().NumField(); i++ {

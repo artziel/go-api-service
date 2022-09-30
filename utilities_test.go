@@ -7,85 +7,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 )
-
-func newHttpTest(method string, url string, handlerFnc func(w http.ResponseWriter, r *http.Request)) (*httptest.ResponseRecorder, error) {
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(handlerFnc)
-
-	handler.ServeHTTP(rr, req)
-
-	return rr, nil
-}
-
-func TestRespondWithJSONError(t *testing.T) {
-
-	rr, err := newHttpTest("GET", "/TestRespondWithJSONMessage", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := errors.New("internal server error")
-		RespondWithJSONError(w, http.StatusInternalServerError, err)
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if status := rr.Code; status != http.StatusInternalServerError {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
-
-	expected := `{"message":"internal server error"}`
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: \n\t got %v\n\twant %v", rr.Body.String(), expected)
-	}
-}
-
-func TestRespondWithJSONMessage(t *testing.T) {
-
-	rr, err := newHttpTest("GET", "/TestRespondWithJSONMessage", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		RespondWithJSONMessage(w, http.StatusOK, "sample json message")
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
-
-	expected := `{"message":"sample json message"}`
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: \n\t got %v\n\twant %v", rr.Body.String(), expected)
-	}
-}
-
-func TestRespondWithJSON(t *testing.T) {
-
-	rr, err := newHttpTest("GET", "/TestRespondWithJSON", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-			"message": "sample message",
-			"id":      1,
-			"price":   1.9,
-		})
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
-
-	expected := `{"id":1,"message":"sample message","price":1.9}`
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: \n\t got %v\n\twant %v", rr.Body.String(), expected)
-	}
-}
 
 func TestFixFileName(t *testing.T) {
 
@@ -271,6 +197,56 @@ func TestGetRealIPAddr(t *testing.T) {
 
 	if ip := GetRealIPAddr(req); ip != "192.168.0.1" {
 		t.Errorf("Unexpected IP value: \n\t got %v\n\twant %v", ip, "192.168.0.1")
+	}
+}
+
+func TestFormToStruct(t *testing.T) {
+
+	type Test struct {
+		Int    int     `json:"int" form:"int"`
+		Uint   uint    `json:"uint" form:"uint"`
+		Float  float64 `json:"float" form:"float"`
+		String string  `json:"string" form:"string"`
+		Bool   bool    `json:"bool" form:"bool"`
+	}
+
+	params := url.Values{}
+	params.Add("int", "100")
+	params.Add("uint", "1")
+	params.Add("float", "1.23")
+	params.Add("bool", "true")
+	params.Add("string", "this is a test")
+
+	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(params.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	r.ParseForm()
+
+	test := Test{}
+
+	if err := FormToStruct(r, Test{}); err == nil {
+		t.Errorf("Expected ErrFormToStructPtrExpected error")
+	}
+
+	err := FormToStruct(r, &test)
+	if err != nil {
+		t.Errorf("FormToStruct fail! error: %s", err)
+	} else {
+		if test.Int != 100 {
+			t.Errorf("FormToStruct Unexpected value for field \"Int\":\nGot  %v\nWant 100", test.Int)
+		}
+		if test.Uint != 1 {
+			t.Errorf("FormToStruct Unexpected value for field \"Uint\":\nGot  %v\nWant 1", test.Uint)
+		}
+		if test.Float != 1.23 {
+			t.Errorf("FormToStruct Unexpected value for field \"Float\":\nGot  %v\nWant 1.23", test.Float)
+		}
+		if !test.Bool {
+			t.Errorf("FormToStruct Unexpected value for field \"Bool\":\nGot  %v\nWant true", test.Bool)
+		}
+		if test.String != "this is a test" {
+			t.Errorf("FormToStruct Unexpected value for field \"String\":\nGot  \"%v\"\nWant \"this is a test\"", test.String)
+		}
 	}
 
 }
