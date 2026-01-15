@@ -44,14 +44,6 @@ func NewService(cnf ServiceConfig) Service {
 		cnf.ReadTimeout = time.Duration(30) * time.Second
 	}
 
-	if cnf.Interface == "" {
-		cnf.Interface = "127.0.0.1"
-	}
-
-	if cnf.Port == 0 {
-		cnf.Port = 1332
-	}
-
 	srv := Service{
 		Address:         fmt.Sprintf("%v:%v", cnf.Interface, cnf.Port),
 		ShutdownTimeout: cnf.ShutdownTimeout,
